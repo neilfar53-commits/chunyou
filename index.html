@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>春游 2026 · 行程规划</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#F4EFE6;--card:#FDFAF5;--text:#1E1A14;--text2:#7A7060;--border:rgba(30,26,20,.1);
+  --green:#4A7C59;--green-light:#EAF2EC;
+  --c1:#C97B4B;--c2:#7B5EBF;--c3:#3D9090;--c4:#B8982A;--c5:#4E8C4A;--c6:#3D6E9E;--c7:#A04848;
+}
+html,body{height:100%;font-family:-apple-system,'PingFang SC','Hiragino Sans GB',sans-serif;background:var(--bg);color:var(--text)}
+.app{display:flex;flex-direction:column;height:100vh;max-width:480px;margin:0 auto;position:relative}
+
+/* Header */
+.hdr{background:var(--bg);border-bottom:1px solid var(--border);padding:12px 16px 0;flex-shrink:0;position:sticky;top:0;z-index:50}
+.hdr-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.hdr-title{font-size:17px;font-weight:700;letter-spacing:.01em}
+.hdr-sub{font-size:11px;color:var(--text2);margin-top:1px}
+.day-pills{display:flex;background:rgba(0,0,0,.07);border-radius:8px;padding:2px;gap:2px}
+.day-pill{padding:4px 14px;border-radius:6px;border:none;background:transparent;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .15s}
+.day-pill.on{background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.chips{display:flex;gap:5px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex-shrink:0;padding:4px 11px;border-radius:20px;border:1.5px solid;font-size:11px;font-weight:500;cursor:pointer;transition:all .12s;white-space:nowrap}
+
+/* Scroll area */
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+
+/* Time group */
+.tg{padding:0 14px}
+.tlabel{font-size:11px;font-weight:700;color:var(--text2);padding:14px 2px 6px;letter-spacing:.06em;display:flex;align-items:center;gap:6px}
+.tlabel::after{content:'';flex:1;height:.5px;background:var(--border)}
+
+/* Act card */
+.act{display:flex;align-items:center;gap:10px;padding:9px 11px;background:var(--card);border-radius:10px;margin-bottom:5px;cursor:pointer;border:1.5px solid transparent;transition:all .12s;position:relative;overflow:hidden}
+.act::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--sc);border-radius:3px 0 0 3px;opacity:0;transition:opacity .15s}
+.act.on::before{opacity:1}
+.act.on{border-color:var(--sc);background:#fff}
+.act:active{transform:scale(.98)}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:var(--sc)}
+.ai{flex:1;min-width:0}
+.aname{font-size:13.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+.ameta{display:flex;align-items:center;gap:5px;margin-top:3px;flex-wrap:wrap}
+.atime{font-size:11px;color:var(--text2)}
+.sbadge{font-size:9.5px;padding:1px 6px;border-radius:4px;font-weight:500}
+.cwarn{font-size:9.5px;color:#A05020;background:#FEF0E4;border-radius:4px;padding:1px 5px}
+.star{font-size:17px;line-height:1;color:var(--text2);padding:4px;flex-shrink:0;transition:all .12s}
+.act.on .star{color:var(--sc)}
+
+/* My plan */
+.plan-empty{text-align:center;padding:70px 24px;color:var(--text2)}
+.plan-empty-icon{font-size:44px;margin-bottom:14px;opacity:.7}
+.plan-empty-txt{font-size:14px;line-height:1.7}
+.plan-day-hdr{font-size:11px;font-weight:700;color:var(--text2);padding:14px 16px 6px;letter-spacing:.06em;display:flex;align-items:center;gap:6px}
+.plan-day-hdr::after{content:'';flex:1;height:.5px;background:var(--border)}
+.pi{display:flex;align-items:flex-start;gap:12px;padding:10px 16px;border-bottom:.5px solid var(--border)}
+.pi-time{min-width:82px;flex-shrink:0}
+.pi-h{font-size:15px;font-weight:700}
+.pi-end{font-size:10px;color:var(--text2);margin-top:1px}
+.pi-info{flex:1;min-width:0}
+.pi-name{font-size:13.5px;font-weight:600;line-height:1.3}
+.pi-stage{font-size:11px;font-weight:500;margin-top:2px}
+.pi-warn{font-size:10px;color:#A05020;background:#FEF0E4;border-radius:4px;padding:2px 7px;margin-top:5px;display:inline-block}
+.pi-del{font-size:16px;padding:4px;cursor:pointer;color:var(--text2);flex-shrink:0;margin-top:2px}
+
+/* Plan header bar */
+.plan-hdr{background:var(--bg);padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.plan-hdr-title{font-size:14px;font-weight:600}
+.plan-summary{font-size:12px;color:var(--text2)}
+
+/* Bottom nav */
+.bnav{display:flex;background:var(--bg);border-top:1px solid var(--border);flex-shrink:0;padding-bottom:env(safe-area-inset-bottom,0)}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0;background:none;border:none;cursor:pointer;position:relative}
+.ni{font-size:20px}
+.nl{font-size:10px;color:var(--text2);transition:color .15s}
+.nb.on .nl{color:var(--green);font-weight:600}
+.nbadge{background:var(--green);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;position:absolute;top:3px;right:calc(50% - 26px)}
+
+/* Tab panels */
+.panel{display:none;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.panel.on{display:block}
+
+/* Toast */
+.toast{position:fixed;bottom:72px;left:50%;transform:translateX(-50%);background:rgba(30,26,20,.85);color:#fff;font-size:13px;padding:8px 16px;border-radius:20px;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;z-index:999}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="hdr">
+    <div class="hdr-row">
+      <div>
+        <div class="hdr-title">春游音乐节 2026 🌱</div>
+        <div class="hdr-sub">眉山·中铁黑龙滩梵木音乐公园</div>
+      </div>
+      <div class="day-pills">
+        <button class="day-pill on" onclick="setDay(1)">4/11</button>
+        <button class="day-pill" onclick="setDay(2)">4/12</button>
+      </div>
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div class="panel on" id="panelAll">
+    <div class="tg" id="allList"></div>
+  </div>
+
+  <div class="panel" id="panelPlan">
+    <div class="plan-hdr">
+      <div class="plan-hdr-title">我的行程</div>
+      <div class="plan-summary" id="planSummary"></div>
+    </div>
+    <div id="planList"></div>
+  </div>
+
+  <div class="bnav">
+    <button class="nb on" id="nb1" onclick="setTab('all')">
+      <span class="ni">🎵</span><span class="nl">演出列表</span>
+    </button>
+    <button class="nb" id="nb2" onclick="setTab('plan')">
+      <span class="ni">⭐</span><span class="nl">我的行程</span>
+      <span class="nbadge" id="nbadge" style="display:none">0</span>
+    </button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STAGES=[
+  {id:'cy',n:'春游舞台',c:'var(--c1)'},
+  {id:'vt',n:'维他命舞台',c:'var(--c2)'},
+  {id:'im',n:'想象力舞台',c:'var(--c3)'},
+  {id:'mg',n:'早上好舞台',c:'var(--c4)'},
+  {id:'sj',n:'嬉春林舞台',c:'var(--c5)'},
+  {id:'rb',n:'回响舞台',c:'var(--c6)'},
+  {id:'ns',n:'过载空间',c:'var(--c7)'},
+];
+
+const D={
+1:[
+  {n:'Sweet Sister Session',s:'16:00',e:'16:40',g:'cy'},
+  {n:'沉默橙',s:'17:00',e:'17:40',g:'cy'},
+  {n:'饮马池',s:'18:00',e:'18:40',g:'cy'},
+  {n:'Naja Naja',s:'19:00',e:'19:40',g:'cy'},
+  {n:'短歌',s:'20:00',e:'20:40',g:'cy'},
+  {n:'ECHTI [BE]',s:'21:00',e:'21:40',g:'cy'},
+  {n:'Sami Galbi [CH]',s:'22:00',e:'22:40',g:'cy'},
+  {n:'STOLEN 秘密行动',s:'23:00',e:'00:00',g:'cy'},
+  {n:'ZIXUAN',s:'15:00',e:'16:00',g:'vt'},
+  {n:'BOREAS',s:'16:00',e:'17:00',g:'vt'},
+  {n:'Darkle',s:'17:00',e:'18:00',g:'vt'},
+  {n:'Leonwill live',s:'18:00',e:'19:00',g:'vt'},
+  {n:'DJ BLUE',s:'19:00',e:'20:00',g:'vt'},
+  {n:'M2F',s:'20:00',e:'21:00',g:'vt'},
+  {n:'PUNX live',s:'21:00',e:'22:00',g:'vt'},
+  {n:'Sulk',s:'22:00',e:'23:00',g:'vt'},
+  {n:'S∅A',s:'23:00',e:'00:00',g:'vt'},
+  {n:'Pilah [FR] live',s:'00:00',e:'01:00',g:'vt'},
+  {n:'Kaishandao live',s:'01:00',e:'02:00',g:'vt'},
+  {n:'Sam Goku [DE]',s:'02:00',e:'03:30',g:'vt'},
+  {n:'DJ Fart in the Club [KR]',s:'03:30',e:'05:00',g:'vt'},
+  {n:'Biiill',s:'05:00',e:'06:00',g:'vt'},
+  {n:'LUNA LI',s:'06:00',e:'07:00',g:'vt'},
+  {n:'CicE',s:'07:00',e:'08:00',g:'vt'},
+  {n:'SUNYOUNG',s:'08:00',e:'09:30',g:'vt'},
+  {n:'茫YUANx 嗅音商店',s:'14:30',e:'15:15',g:'im'},
+  {n:'Mindy Meng Wang & Tim Shiel [AU]',s:'15:30',e:'16:15',g:'im'},
+  {n:'Taiga Unplugged',s:'16:30',e:'17:15',g:'im'},
+  {n:'闪闪 Hex In Sparkle',s:'17:30',e:'18:15',g:'im'},
+  {n:'黄锦',s:'18:30',e:'19:15',g:'im'},
+  {n:'Bottlesmoker [ID]',s:'19:30',e:'20:30',g:'im'},
+  {n:'梦马WildRide',s:'20:50',e:'21:50',g:'im'},
+  {n:'LAGERREGAL [DE]',s:'22:10',e:'23:10',g:'im'},
+  {n:'Roshani [CH]',s:'22:30',e:'23:30',g:'im'},
+  {n:'Rasrankin',s:'15:00',e:'16:00',g:'mg'},
+  {n:'Marco Duits [NL]',s:'16:00',e:'17:00',g:'mg'},
+  {n:'Yepwatt live',s:'17:00',e:'18:00',g:'mg'},
+  {n:'Geezer live',s:'18:00',e:'19:00',g:'mg'},
+  {n:'Diva Li',s:'19:00',e:'20:00',g:'mg'},
+  {n:'DJ D',s:'20:00',e:'21:00',g:'mg'},
+  {n:'Why',s:'21:00',e:'22:00',g:'mg'},
+  {n:'WhiTe',s:'22:00',e:'23:00',g:'mg'},
+  {n:'RuiTang',s:'23:00',e:'00:00',g:'mg'},
+  {n:'BAMBI',s:'00:00',e:'01:00',g:'mg'},
+  {n:'KONGSENT',s:'01:00',e:'02:00',g:'mg'},
+  {n:'ToloUse Low Trax [DE]',s:'02:00',e:'04:00',g:'mg'},
+  {n:'KUN & 杨伍德 & 郑旭阳',s:'14:30',e:'15:10',g:'sj'},
+  {n:'内在银河漫游',s:'15:25',e:'16:05',g:'sj'},
+  {n:"[Balance'3]",s:'16:20',e:'17:00',g:'sj'},
+  {n:'FAAR [KZ]',s:'17:15',e:'17:55',g:'sj'},
+  {n:'Lionmilk [US]',s:'18:10',e:'18:50',g:'sj'},
+  {n:'I.C.Y [Au]',s:'19:05',e:'20:05',g:'sj'},
+  {n:'Colloboh [US]',s:'20:20',e:'21:00',g:'sj'},
+  {n:'阿傻尼',s:'21:15',e:'21:55',g:'sj'},
+  {n:'太行流动艺术团·不烬山',s:'22:00',e:'22:30',g:'sj'},
+  {n:'7XIAN 七闲',s:'22:30',e:'23:10',g:'sj'},
+  {n:'VIBRO TUNES [KZ]',s:'23:25',e:'00:30',g:'sj'},
+  {n:'Luca',s:'00:30',e:'02:30',g:'sj'},
+  {n:'AIRYDISC live',s:'15:00',e:'16:30',g:'rb'},
+  {n:'GREENTECH',s:'16:30',e:'18:00',g:'rb'},
+  {n:'BODYSNATCHERS',s:'18:00',e:'19:30',g:'rb'},
+  {n:'TAO',s:'19:30',e:'21:00',g:'rb'},
+  {n:'YAOLIC',s:'21:00',e:'22:30',g:'rb'},
+  {n:'KATAK live',s:'22:30',e:'00:00',g:'rb'},
+  {n:'YII Hybrid live',s:'00:00',e:'01:30',g:'rb'},
+  {n:'XIANZAI [LB] live',s:'01:30',e:'04:30',g:'rb'},
+  {n:'VILLAGECHIEF',s:'04:30',e:'06:00',g:'rb'},
+  {n:'三花川剧团',s:'13:30',e:'14:10',g:'ns'},
+  {n:'纺诗车间',s:'14:30',e:'16:30',g:'ns'},
+  {n:'过戴脱口秀',s:'17:00',e:'18:40',g:'ns'},
+  {n:'剑龙大厦·星光/作业/张途/包子',s:'19:00',e:'20:10',g:'ns'},
+  {n:'费那奇动画剧场',s:'20:30',e:'22:00',g:'ns'},
+],
+2:[
+  {n:'碎梦飞跃 Sleep Leaps',s:'16:00',e:'16:40',g:'cy'},
+  {n:'王忆灵 Wang Yiling',s:'17:00',e:'17:40',g:'cy'},
+  {n:'No Trixx [UK]',s:'18:00',e:'18:40',g:'cy'},
+  {n:'NaraBara',s:'19:00',e:'19:40',g:'cy'},
+  {n:'Fayzz',s:'20:00',e:'20:40',g:'cy'},
+  {n:'Mong Tong',s:'21:00',e:'21:40',g:'cy'},
+  {n:'Taiga',s:'22:00',e:'22:40',g:'cy'},
+  {n:'Blue Foundation [DK]',s:'23:00',e:'00:00',g:'cy'},
+  {n:'COLA REN',s:'15:00',e:'16:00',g:'vt'},
+  {n:'linUSB [BE] live',s:'16:00',e:'17:00',g:'vt'},
+  {n:'Fengshui',s:'17:00',e:'18:00',g:'vt'},
+  {n:'Luwei',s:'18:00',e:'19:00',g:'vt'},
+  {n:'DJ Plead [AU] live',s:'19:00',e:'20:00',g:'vt'},
+  {n:'LST 李橘 live',s:'20:00',e:'21:00',g:'vt'},
+  {n:'Xinyi',s:'21:00',e:'22:00',g:'vt'},
+  {n:'Stella Z',s:'22:00',e:'23:00',g:'vt'},
+  {n:'Cvalda live',s:'23:00',e:'00:00',g:'vt'},
+  {n:'Knopha',s:'00:00',e:'01:00',g:'vt'},
+  {n:'Tristan Arp [US] live',s:'01:00',e:'02:00',g:'vt'},
+  {n:'Simsaara [BE]',s:'02:00',e:'03:30',g:'vt'},
+  {n:'QiuQiu',s:'03:30',e:'04:30',g:'vt'},
+  {n:'Sanyo',s:'04:30',e:'05:30',g:'vt'},
+  {n:'Heling',s:'05:30',e:'07:30',g:'vt'},
+  {n:'吕志良',s:'07:30',e:'09:30',g:'vt'},
+  {n:'www.张大人.COME',s:'14:30',e:'15:30',g:'im'},
+  {n:'巴彦达莱',s:'15:45',e:'16:30',g:'im'},
+  {n:'Night Lunch [NZ]',s:'16:45',e:'17:30',g:'im'},
+  {n:'水草计划',s:'17:45',e:'18:30',g:'im'},
+  {n:'Chris Imler [DE]',s:'18:45',e:'19:30',g:'im'},
+  {n:'脱兔 Run! Rabbit Run!',s:'19:50',e:'20:50',g:'im'},
+  {n:'Francine Satu [CH]',s:'21:10',e:'22:10',g:'im'},
+  {n:'LAGERREGAL [DE]',s:'22:10',e:'23:10',g:'im'},
+  {n:'自然点 live',s:'15:00',e:'16:00',g:'mg'},
+  {n:'卫祖 Neon live',s:'16:00',e:'17:00',g:'mg'},
+  {n:'S&S live',s:'17:00',e:'18:00',g:'mg'},
+  {n:'LILITH',s:'18:00',e:'19:00',g:'mg'},
+  {n:'Aliang',s:'19:00',e:'20:00',g:'mg'},
+  {n:'TUOTUO',s:'20:00',e:'21:00',g:'mg'},
+  {n:'FEIYI',s:'21:00',e:'22:00',g:'mg'},
+  {n:'Javis',s:'22:00',e:'23:00',g:'mg'},
+  {n:'X.Lee',s:'23:00',e:'00:00',g:'mg'},
+  {n:'MAX SHEN',s:'00:00',e:'01:00',g:'mg'},
+  {n:'Fujita Pinnacle [SL]',s:'01:00',e:'02:00',g:'mg'},
+  {n:'FRUIT',s:'02:00',e:'03:00',g:'mg'},
+  {n:'OXYG3N',s:'03:00',e:'04:00',g:'mg'},
+  {n:'Edigee [KZ]',s:'14:30',e:'15:10',g:'sj'},
+  {n:'Sergey Vajava [KZ]',s:'15:25',e:'16:05',g:'sj'},
+  {n:'老罗 LUO',s:'16:20',e:'17:00',g:'sj'},
+  {n:'SOUR NO MORE「不嗖酸」',s:'17:15',e:'17:55',g:'sj'},
+  {n:'Lois Lazur [FR]',s:'18:10',e:'18:50',g:'sj'},
+  {n:'Ts.Bayandalai',s:'19:25',e:'20:05',g:'sj'},
+  {n:'Azi & Daibird·不烬山',s:'20:20',e:'21:00',g:'sj'},
+  {n:'太行流动艺术团',s:'21:00',e:'21:30',g:'sj'},
+  {n:'阿依木',s:'21:30',e:'22:10',g:'sj'},
+  {n:'tp Dutchkiss [US]',s:'22:25',e:'23:05',g:'sj'},
+  {n:'Theopium Lumination [KZ]',s:'23:15',e:'01:00',g:'sj'},
+  {n:'JIXIANG',s:'15:00',e:'16:30',g:'rb'},
+  {n:'FUGUI',s:'16:30',e:'18:00',g:'rb'},
+  {n:'HUSLE Hybrid live',s:'18:00',e:'19:30',g:'rb'},
+  {n:'ACID MAN [TH]',s:'19:30',e:'21:00',g:'rb'},
+  {n:'RINGO SIN',s:'21:00',e:'22:30',g:'rb'},
+  {n:'O.A.Y',s:'22:30',e:'00:00',g:'rb'},
+  {n:'CATCHUP',s:'00:00',e:'01:30',g:'rb'},
+  {n:'AUDIOSYNTAX [DE] live',s:'01:30',e:'04:30',g:'rb'},
+  {n:'TAKOYOKI',s:'04:30',e:'06:00',g:'rb'},
+  {n:'POLLYHEDRON',s:'06:00',e:'07:00',g:'rb'},
+  {n:'三花川剧团',s:'13:30',e:'14:10',g:'ns'},
+  {n:'纺诗车间',s:'14:30',e:'16:30',g:'ns'},
+  {n:'过戴脱口秀',s:'17:00',e:'18:40',g:'ns'},
+  {n:'剑龙大厦',s:'19:00',e:'20:10',g:'ns'},
+  {n:'费那奇动画剧场',s:'20:30',e:'22:00',g:'ns'},
+]};
+
+let day=1,tab='all',stg='all';
+const ST=new Set();
+
+function pt(t){const[h,m]=t.split(':').map(Number);return(h<13?h+24:h)*60+m}
+function sg(id){return STAGES.find(s=>s.id===id)}
+function key(d,n){return d+'|'+n}
+
+function conflicts(){
+  const c=new Set();
+  const arr=[...ST].filter(k=>k.startsWith(day+'|')).map(k=>D[day].find(a=>key(day,a.n)===k)).filter(Boolean);
+  for(let i=0;i<arr.length;i++)for(let j=i+1;j<arr.length;j++){
+    const a=arr[i],b=arr[j];
+    if(a.g===b.g)continue;
+    const as=pt(a.s),ae=pt(a.e),bs=pt(b.s),be=pt(b.e);
+    if(as<be&&ae>bs){c.add(a.n);c.add(b.n)}
+  }
+  return c;
+}
+
+function renderChips(){
+  const el=document.getElementById('chips');
+  const all=stg==='all';
+  let h=`<button class="chip" style="border-color:${all?'var(--text)':'var(--border)'};color:${all?'#fff':'var(--text2)'};background:${all?'var(--text)':'transparent'}" onclick="setStg('all')">全部</button>`;
+  STAGES.forEach(s=>{
+    const on=stg===s.id;
+    h+=`<button class="chip" style="border-color:${s.c};color:${on?'#fff':s.c};background:${on?s.c:'transparent'}" onclick="setStg('${s.id}')">${s.n.replace('舞台','').replace('空间','')}</button>`;
+  });
+  el.innerHTML=h;
+}
+
+function renderAll(){
+  const cf=conflicts();
+  const acts=D[day].filter(a=>stg==='all'||a.g===stg).sort((a,b)=>pt(a.s)-pt(b.s));
+  const grps={};
+  acts.forEach(a=>{
+    const h=parseInt(a.s);
+    const dh=h<13?h+24:h;
+    if(!grps[dh])grps[dh]=[];
+    grps[dh].push(a);
+  });
+  let html='';
+  Object.keys(grps).sort((a,b)=>+a-+b).forEach(h=>{
+    const label=h>=24?`0${h-24}`.slice(-2)+':00':`${String(h).padStart(2,'0')}:00`;
+    html+=`<div class="tg"><div class="tlabel">${label}</div>`;
+    grps[h].forEach(a=>{
+      const s=sg(a.g);const on=ST.has(key(day,a.n));const isC=cf.has(a.n);
+      const esc=a.n.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      html+=`<div class="act${on?' on':''}" style="--sc:${s.c}" onclick="tog(${day},'${esc}')">
+        <div class="dot"></div>
+        <div class="ai">
+          <div class="aname">${a.n}</div>
+          <div class="ameta">
+            <span class="atime">${a.s}–${a.e}</span>
+            <span class="sbadge" style="background:${s.c}22;color:${s.c}">${s.n}</span>
+            ${isC?'<span class="cwarn">⚠ 冲突</span>':''}
+          </div>
+        </div>
+        <div class="star">${on?'★':'☆'}</div>
+      </div>`;
+    });
+    html+='</div>';
+  });
+  document.getElementById('allList').innerHTML=html||'<div style="padding:40px;text-align:center;color:var(--text2);font-size:14px">暂无演出</div>';
+}
+
+function renderPlan(){
+  const cf=conflicts();
+  const all=[1,2].flatMap(d=>D[d].filter(a=>ST.has(key(d,a.n))).map(a=>({...a,day:d}))).sort((a,b)=>{
+    if(a.day!==b.day)return a.day-b.day;
+    return pt(a.s)-pt(b.s);
+  });
+  if(!all.length){
+    document.getElementById('planList').innerHTML=`<div class="plan-empty"><div class="plan-empty-icon">🌱</div><div class="plan-empty-txt">还没有收藏任何演出<br>去列表点击 ☆ 添加</div></div>`;
+    document.getElementById('planSummary').textContent='';
+    return;
+  }
+  const d1=all.filter(a=>a.day===1).length,d2=all.filter(a=>a.day===2).length;
+  document.getElementById('planSummary').textContent=`共 ${all.length} 场`;
+  let html='',prevDay=0;
+  all.forEach(a=>{
+    const s=sg(a.g);const isC=cf.has(a.n)&&a.day===day;
+    if(a.day!==prevDay){
+      html+=`<div class="plan-day-hdr">4月${a.day===1?'11':'12'}日 Day ${a.day}</div>`;
+      prevDay=a.day;
+    }
+    const esc=a.n.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    html+=`<div class="pi">
+      <div class="pi-time"><div class="pi-h">${a.s}</div><div class="pi-end">结束 ${a.e}</div></div>
+      <div class="pi-info">
+        <div class="pi-name">${a.n}</div>
+        <div class="pi-stage" style="color:${s.c}">${s.n}</div>
+        ${isC?'<div class="pi-warn">⚠ 与其他收藏时间重叠</div>':''}
+      </div>
+      <div class="pi-del" onclick="tog(${a.day},'${esc}')">✕</div>
+    </div>`;
+  });
+  document.getElementById('planList').innerHTML=html;
+}
+
+function updateBadge(){
+  const n=[...ST].filter(k=>k.startsWith(day+'|')).length;
+  const b=document.getElementById('nbadge');
+  b.style.display=n?'block':'none';
+  b.textContent=n;
+}
+
+function tog(d,n){
+  const k=key(d,n);
+  const adding=!ST.has(k);
+  if(adding)ST.add(k);else ST.delete(k);
+  renderAll();renderPlan();updateBadge();
+  showToast(adding?`已添加到行程 ★`:`已从行程移除`);
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),1800);
+}
+
+function setDay(d){
+  day=d;
+  document.querySelectorAll('.day-pill').forEach((b,i)=>b.classList.toggle('on',i+1===d));
+  renderAll();updateBadge();
+  document.getElementById('panelAll').scrollTop=0;
+}
+
+function setTab(t){
+  tab=t;
+  document.getElementById('panelAll').classList.toggle('on',t==='all');
+  document.getElementById('panelPlan').classList.toggle('on',t==='plan');
+  document.getElementById('nb1').classList.toggle('on',t==='all');
+  document.getElementById('nb2').classList.toggle('on',t==='plan');
+  if(t==='plan')renderPlan();
+}
+
+function setStg(s){stg=s;renderChips();renderAll()}
+
+renderChips();renderAll();updateBadge();
+</script>
+</body>
+</html>
