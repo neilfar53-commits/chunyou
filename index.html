@@ -50,6 +50,21 @@ html,body{height:100%;font-family:-apple-system,'PingFang SC','Hiragino Sans GB'
 .star{font-size:17px;line-height:1;color:var(--text2);padding:4px;flex-shrink:0;transition:all .12s}
 .act.on .star{color:var(--sc)}
 
+/* Detail modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:flex-end;justify-content:center;z-index:1000}
+.modal.on{display:flex}
+.sheet{width:min(520px,100%);background:var(--card);border-radius:14px 14px 0 0;border:1px solid var(--border);box-shadow:0 -10px 30px rgba(0,0,0,.18);max-height:78vh;overflow:auto;-webkit-overflow-scrolling:touch}
+.sheet-h{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border)}
+.sheet-title{font-size:16px;font-weight:800}
+.sheet-sub{font-size:11px;color:var(--text2);margin-top:3px}
+.sheet-x{font-size:18px;line-height:1;background:none;border:none;color:var(--text2);padding:4px 6px;cursor:pointer}
+.sheet-b{padding:14px 16px 18px}
+.p{font-size:13px;line-height:1.7;color:var(--text)}
+.links{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.link{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:999px;border:1px solid var(--border);background:#fff;color:var(--text);font-size:12px;text-decoration:none}
+.audio{margin-top:12px}
+.audio audio{width:100%}
+
 /* My plan */
 .plan-empty{text-align:center;padding:70px 24px;color:var(--text2)}
 .plan-empty-icon{font-size:44px;margin-bottom:14px;opacity:.7}
@@ -128,6 +143,22 @@ html,body{height:100%;font-family:-apple-system,'PingFang SC','Hiragino Sans GB'
 </div>
 
 <div class="toast" id="toast"></div>
+<div class="modal" id="modal" onclick="closeModal()">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-h">
+      <div>
+        <div class="sheet-title" id="mTitle">艺人</div>
+        <div class="sheet-sub" id="mSub"></div>
+      </div>
+      <button class="sheet-x" onclick="closeModal()" aria-label="关闭">✕</button>
+    </div>
+    <div class="sheet-b">
+      <div class="p" id="mIntro"></div>
+      <div class="audio" id="mAudio" style="display:none"></div>
+      <div class="links" id="mLinks"></div>
+    </div>
+  </div>
+</div>
 
 <script>
 const STAGES=[
@@ -294,6 +325,13 @@ const ST=new Set();
 /** 收藏持久化：同一浏览器/微信内会保留，清缓存或无痕模式会丢失 */
 const PLAN_STORAGE_KEY='chunyou_plan_v1';
 
+// 这里可以逐个补充艺人资料：简介 + 链接 + 可选音频
+// links: [{t:'网易云',u:'https://...'},{t:'Spotify',u:'https://...'}]
+// audio: {src:'https://.../sample.mp3', type:'audio/mpeg'}
+const ARTIST_INFO={
+  // '沉默橙': {intro:'一段简介...', links:[{t:'听歌',u:'https://...'}]},
+};
+
 function loadPlanFromStorage(){
   try{
     const raw=localStorage.getItem(PLAN_STORAGE_KEY);
@@ -357,7 +395,7 @@ function renderAll(){
     grps[h].forEach(a=>{
       const s=sg(a.g);const on=ST.has(key(day,a.n));const isC=cf.has(a.n);
       const esc=a.n.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-      html+=`<div class="act${on?' on':''}" style="--sc:${s.c}" onclick="tog(${day},'${esc}')">
+      html+=`<div class="act${on?' on':''}" style="--sc:${s.c}" onclick="openDetail(${day},'${esc}')">
         <div class="dot"></div>
         <div class="ai">
           <div class="aname">${a.n}</div>
@@ -367,7 +405,7 @@ function renderAll(){
             ${isC?'<span class="cwarn">⚠ 冲突</span>':''}
           </div>
         </div>
-        <div class="star">${on?'★':'☆'}</div>
+        <div class="star" onclick="event.stopPropagation(); tog(${day},'${esc}')">${on?'★':'☆'}</div>
       </div>`;
     });
     html+='</div>';
@@ -441,6 +479,7 @@ function setDay(d){
   day=d;
   document.querySelectorAll('.day-pill').forEach((b,i)=>b.classList.toggle('on',i+1===d));
   renderAll();updateBadge();
+  if(tab==='plan')renderPlan();
   document.getElementById('panelAll').scrollTop=0;
 }
 
@@ -454,6 +493,36 @@ function setTab(t){
 }
 
 function setStg(s){stg=s;renderChips();renderAll()}
+
+function openDetail(d,name){
+  const a=D[d].find(x=>x.n===name);
+  const s=a?sg(a.g):null;
+  const info=ARTIST_INFO[name]||{};
+  document.getElementById('mTitle').textContent=name;
+  document.getElementById('mSub').textContent=a?`Day${d} · ${a.s}–${a.e} · ${s?s.n:''}`:'';
+  document.getElementById('mIntro').textContent=info.intro||'暂无介绍。你可以把这个艺人的简介/试听链接发我，我帮你补进去。';
+
+  const linksEl=document.getElementById('mLinks');
+  const links=Array.isArray(info.links)?info.links:[];
+  linksEl.innerHTML=links.map(l=>`<a class="link" href="${l.u}" target="_blank" rel="noopener">${l.t}</a>`).join('') || '';
+
+  const audioEl=document.getElementById('mAudio');
+  if(info.audio && info.audio.src){
+    audioEl.style.display='block';
+    const t=info.audio.type||'audio/mpeg';
+    audioEl.innerHTML=`<audio controls preload="none"><source src="${info.audio.src}" type="${t}"></audio>`;
+  }else{
+    audioEl.style.display='none';
+    audioEl.innerHTML='';
+  }
+
+  document.getElementById('modal').classList.add('on');
+}
+function closeModal(){
+  const m=document.getElementById('modal');
+  if(!m)return;
+  m.classList.remove('on');
+}
 
 loadPlanFromStorage();
 renderChips();renderAll();updateBadge();
