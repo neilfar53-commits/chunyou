@@ -291,14 +291,31 @@ const D={
 
 let day=1,tab='all',stg='all';
 const ST=new Set();
+/** 收藏持久化：同一浏览器/微信内会保留，清缓存或无痕模式会丢失 */
+const PLAN_STORAGE_KEY='chunyou_plan_v1';
+
+function loadPlanFromStorage(){
+  try{
+    const raw=localStorage.getItem(PLAN_STORAGE_KEY);
+    if(!raw)return;
+    const arr=JSON.parse(raw);
+    if(!Array.isArray(arr))return;
+    arr.forEach(k=>{if(typeof k==='string'&&k.includes('|'))ST.add(k)});
+  }catch(e){}
+}
+function savePlanToStorage(){
+  try{
+    localStorage.setItem(PLAN_STORAGE_KEY,JSON.stringify([...ST]));
+  }catch(e){}
+}
 
 function pt(t){const[h,m]=t.split(':').map(Number);return(h<13?h+24:h)*60+m}
 function sg(id){return STAGES.find(s=>s.id===id)}
 function key(d,n){return d+'|'+n}
 
-function conflicts(){
+function conflictsForDay(d){
   const c=new Set();
-  const arr=[...ST].filter(k=>k.startsWith(day+'|')).map(k=>D[day].find(a=>key(day,a.n)===k)).filter(Boolean);
+  const arr=[...ST].filter(k=>k.startsWith(d+'|')).map(k=>D[d].find(a=>key(d,a.n)===k)).filter(Boolean);
   for(let i=0;i<arr.length;i++)for(let j=i+1;j<arr.length;j++){
     const a=arr[i],b=arr[j];
     if(a.g===b.g)continue;
@@ -306,6 +323,10 @@ function conflicts(){
     if(as<be&&ae>bs){c.add(a.n);c.add(b.n)}
   }
   return c;
+}
+
+function conflicts(){
+  return conflictsForDay(day);
 }
 
 function renderChips(){
@@ -355,36 +376,42 @@ function renderAll(){
 }
 
 function renderPlan(){
-  const cf=conflicts();
-  const all=[1,2].flatMap(d=>D[d].filter(a=>ST.has(key(d,a.n))).map(a=>({...a,day:d}))).sort((a,b)=>{
-    if(a.day!==b.day)return a.day-b.day;
-    return pt(a.s)-pt(b.s);
-  });
-  if(!all.length){
+  const cf1=conflictsForDay(1);
+  const cf2=conflictsForDay(2);
+  const d1Acts=D[1].filter(a=>ST.has(key(1,a.n))).map(a=>({...a,day:1})).sort((a,b)=>pt(a.s)-pt(b.s));
+  const d2Acts=D[2].filter(a=>ST.has(key(2,a.n))).map(a=>({...a,day:2})).sort((a,b)=>pt(a.s)-pt(b.s));
+  const total=d1Acts.length+d2Acts.length;
+
+  if(!total){
     document.getElementById('planList').innerHTML=`<div class="plan-empty"><div class="plan-empty-icon">🌱</div><div class="plan-empty-txt">还没有收藏任何演出<br>去列表点击 ☆ 添加</div></div>`;
     document.getElementById('planSummary').textContent='';
     return;
   }
-  const d1=all.filter(a=>a.day===1).length,d2=all.filter(a=>a.day===2).length;
-  document.getElementById('planSummary').textContent=`共 ${all.length} 场`;
-  let html='',prevDay=0;
-  all.forEach(a=>{
-    const s=sg(a.g);const isC=cf.has(a.n)&&a.day===day;
-    if(a.day!==prevDay){
-      html+=`<div class="plan-day-hdr">4月${a.day===1?'11':'12'}日 Day ${a.day}</div>`;
-      prevDay=a.day;
-    }
-    const esc=a.n.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    html+=`<div class="pi">
-      <div class="pi-time"><div class="pi-h">${a.s}</div><div class="pi-end">结束 ${a.e}</div></div>
-      <div class="pi-info">
-        <div class="pi-name">${a.n}</div>
-        <div class="pi-stage" style="color:${s.c}">${s.n}</div>
-        ${isC?'<div class="pi-warn">⚠ 与其他收藏时间重叠</div>':''}
-      </div>
-      <div class="pi-del" onclick="tog(${a.day},'${esc}')">✕</div>
-    </div>`;
-  });
+  document.getElementById('planSummary').textContent=`Day1 ${d1Acts.length} 场 · Day2 ${d2Acts.length} 场 · 共 ${total} 场`;
+
+  function renderDaySection(list, dayNum, cf){
+    if(!list.length)return '';
+    let html=`<div class="plan-day-hdr">4月${dayNum===1?'11':'12'}日 Day ${dayNum}</div>`;
+    list.forEach(a=>{
+      const s=sg(a.g);
+      const isC=cf.has(a.n);
+      const esc=a.n.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      html+=`<div class="pi">
+        <div class="pi-time"><div class="pi-h">${a.s}</div><div class="pi-end">结束 ${a.e}</div></div>
+        <div class="pi-info">
+          <div class="pi-name">${a.n}</div>
+          <div class="pi-stage" style="color:${s.c}">${s.n}</div>
+          ${isC?'<div class="pi-warn">⚠ 与其他收藏时间重叠</div>':''}
+        </div>
+        <div class="pi-del" onclick="tog(${dayNum},'${esc}')">✕</div>
+      </div>`;
+    });
+    return html;
+  }
+
+  let html='';
+  html += renderDaySection(d1Acts, 1, cf1);
+  html += renderDaySection(d2Acts, 2, cf2);
   document.getElementById('planList').innerHTML=html;
 }
 
@@ -399,6 +426,7 @@ function tog(d,n){
   const k=key(d,n);
   const adding=!ST.has(k);
   if(adding)ST.add(k);else ST.delete(k);
+  savePlanToStorage();
   renderAll();renderPlan();updateBadge();
   showToast(adding?`已添加到行程 ★`:`已从行程移除`);
 }
@@ -427,6 +455,7 @@ function setTab(t){
 
 function setStg(s){stg=s;renderChips();renderAll()}
 
+loadPlanFromStorage();
 renderChips();renderAll();updateBadge();
 </script>
 </body>
